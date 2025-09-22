@@ -1,0 +1,984 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Land of Multiservice Technologier - Comprehensive technology and regulatory services in Muhanga-Gitarama">
+    <meta name="keywords" content="technology services, Irembo, RURA, RRA, RDB, web development, Muhanga-Gitarama">
+    <meta name="author" content="Schwazinegas">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <title>LAND OF MULTSERVICE TECHNOLOGIER</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: #0a1128; color: #e5e5e5; line-height: 1.6; scroll-behavior: smooth; transition: all 0.3s ease; }
+        body.dark-mode { background-color: #ffffff; color: #000000; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+        /* Loading Animation */
+        #loading {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a3d62; display: flex; justify-content: center; align-items: center;
+            z-index: 9999; transition: opacity 0.5s;
+        }
+        .loader {
+            border: 8px solid #3c6e71; border-top: 8px solid #00f5d4;
+            border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #0a3d62, #7209b7, #00f5d4);
+            color: #fff; padding: 20px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: sticky; top: 0; z-index: 1000;
+        }
+        body.dark-mode header {
+            background: #ffffff; color: #000000; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .logo { display: flex; align-items: center; gap: 15px; }
+        .logo img {
+            height: 90px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+        .logo img:hover { transform: scale(1.1); filter: brightness(1.2); }
+        .site-title {
+            font-size: 36px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+            background: linear-gradient(45deg, #00f5d4, #f72585, #b5179e);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        body.dark-mode .site-title { color: #000000; background: none; }
+        nav ul { display: flex; list-style: none; }
+        nav ul li { margin-left: 25px; }
+        nav ul li a {
+            color: #fff; text-decoration: none; font-weight: 500; transition: color 0.3s;
+        }
+        body.dark-mode nav ul li a { color: #000000; }
+        nav ul li a:hover, nav ul li a:focus { color: #00f5d4; text-shadow: 0 0 8px rgba(0,245,212,0.5); }
+        .hamburger { display: none; font-size: 24px; background: none; border: none; color: #fff; cursor: pointer; }
+        body.dark-mode .hamburger { color: #000000; }
+
+        /* Language Selector, Dark Mode Toggle, and WhatsApp */
+        .language-select {
+            display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.7);
+            padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        body.dark-mode .language-select { background: rgba(0,0,0,0.1); }
+        .language-select label { color: #fff; font-weight: 600; font-size: 14px; }
+        body.dark-mode .language-select label { color: #000000; }
+        .language-select select {
+            padding: 6px 10px; border-radius: 5px; border: none; font-size: 14px;
+            background: #3c6e71; color: #fff; cursor: pointer;
+        }
+        body.dark-mode .language-select select { background: #e0e0e0; color: #000000; }
+        .dark-mode-toggle {
+            background: rgba(0,0,0,0.7); color: #fff; border: none; padding: 8px 12px;
+            border-radius: 8px; cursor: pointer; margin-left: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        body.dark-mode .dark-mode-toggle { background: #e0e0e0; color: #000000; }
+        .dark-mode-toggle:hover { background: #00f5d4; color: #0a3d62; }
+        .whatsapp-link {
+            display: inline-flex; align-items: center; text-decoration: none; color: #ffffff;
+            font-size: 14px; margin-left: 10px; transition: color 0.3s;
+        }
+        body.dark-mode .whatsapp-link { color: #000000; }
+        .whatsapp-icon {
+            width: 24px; height: 24px; margin-right: 8px; filter: invert(100%);
+        }
+        body.dark-mode .whatsapp-icon { filter: none; }
+        .whatsapp-link:hover { color: #00f5d4; }
+
+        /* Hero Section */
+        .hero {
+            position: relative; height: 80vh; display: flex; align-items: center; justify-content: center;
+            text-align: center; color: #fff; overflow: hidden;
+        }
+        body.dark-mode .hero { color: #000000; }
+        .hero-video video {
+            position: absolute; top: 50%; left: 50%; min-width: 100%; min-height: 100%;
+            transform: translate(-50%,-50%); object-fit: cover; z-index: 0; transition: opacity 1s;
+        }
+        .hero-content { position: relative; z-index: 2; padding: 0 20px; }
+        .hero h1 {
+            font-size: 3rem; margin-bottom: 20px; background: linear-gradient(45deg, #00f5d4, #f72585);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            text-shadow: 0 0 10px rgba(0,245,212,0.5); animation: colorShift 5s infinite;
+        }
+        body.dark-mode .hero h1 { color: #000000; background: none; text-shadow: none; }
+        .hero p { font-size: 1.2rem; max-width: 700px; margin: 0 auto 30px; text-shadow: 0 0 6px rgba(0,0,0,0.5); }
+        body.dark-mode .hero p { color: #000000; text-shadow: none; }
+        .btn {
+            background: #00f5d4; color: #0a3d62; padding: 12px 30px; border-radius: 30px;
+            text-decoration: none; font-weight: 600; box-shadow: 0 4px 15px rgba(0,245,212,0.4);
+            transition: all 0.3s; margin-top: 20px;
+        }
+        body.dark-mode .btn { background: #00f5d4; color: #0a3d62; }
+        .btn:hover, .btn:focus { background: #7209b7; color: #fff; transform: translateY(-3px); box-shadow: 0 6px 20px rgba(114,9,183,0.5); }
+        .hero::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10,29,98,0.5); z-index: 1;
+        }
+        body.dark-mode .hero::after { background: rgba(255,255,255,0.1); }
+
+        /* Search Bar and Service Filter */
+        .search-container {
+            padding: 20px 0; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+        }
+        .search-container input {
+            width: 100%; max-width: 400px; padding: 12px 20px; border-radius: 25px;
+            border: 1px solid #3c6e71; background: rgba(255,255,255,0.1); color: #fff;
+            font-size: 16px; transition: all 0.3s;
+        }
+        body.dark-mode .search-container input {
+            border: 1px solid #000000; background: #e0e0e0; color: #000000;
+        }
+        .search-container input:focus { border-color: #00f5d4; outline: none; background: rgba(255,255,255,0.2); }
+        body.dark-mode .search-container input:focus { background: #f0f0f0; }
+        .filter-btn {
+            background: #0a3d62; color: #fff; border: none; padding: 10px 20px;
+            border-radius: 25px; cursor: pointer; transition: all 0.3s;
+        }
+        body.dark-mode .filter-btn { background: #e0e0e0; color: #000000; }
+        .filter-btn:hover, .filter-btn.active { background: #00f5d4; color: #0a3d62; }
+        
+        /* Services */
+        .services { background: linear-gradient(135deg, #0a3d62, #7209b7); padding: 80px 0; }
+        body.dark-mode .services { background: #ffffff; }
+        .section-title { text-align: center; margin-bottom: 50px; }
+        .section-title h2 {
+            font-size: 2.5rem; background: linear-gradient(45deg, #00f5d4, #f72585, #e2dce1);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            animation: colorShift 5s infinite;
+        }
+        body.dark-mode .section-title h2 { color: #000000; background: none; }
+        .section-title p { color: rgba(218, 207, 215, 0.8); max-width: 600px; margin: 0 auto; }
+        body.dark-mode .section-title p { color: #000000; }
+        .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; }
+        .service-card {
+            background: #1c2526; border-radius: 12px; padding: 30px; text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); transform: translateY(30px); opacity: 0;
+            transition: all 0.6s ease;
+        }
+        body.dark-mode .service-card { background: #f0f0f0; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .service-card.show { transform: translateY(0); opacity: 1; }
+        .service-card:hover { transform: translateY(-10px); box-shadow: 0 10px 20px rgba(0,245,212,0.3); }
+        .service-card i { font-size: 40px; color: #00f5d4; margin-bottom: 20px; transition: color 0.3s; }
+        body.dark-mode .service-card i { color: #00f5d4; }
+        .service-card:hover i { color: #f72585; }
+        .service-card h3 { color: #e5e5e5; margin-bottom: 15px; transition: color 0.3s; }
+        body.dark-mode .service-card h3 { color: #000000; }
+        .service-card:hover h3 { color: #00f5d4; }
+        .service-card p { color: #a3bffa; }
+        body.dark-mode .service-card p { color: #333333; }
+
+        /* Testimonial Section */
+        .testimonials { padding: 80px 0; background: linear-gradient(to right, #0a1128, #1c2526); }
+        body.dark-mode .testimonials { background: #ffffff; }
+        .testimonial-slider { position: relative; max-width: 800px; margin: 0 auto; overflow: hidden; }
+        .testimonial {
+            display: none; text-align: center; padding: 20px; background: #1c2526;
+            border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: opacity 0.5s;
+        }
+        body.dark-mode .testimonial { background: #f0f0f0; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .testimonial.active { display: block; opacity: 1; }
+        .testimonial p { font-style: italic; margin-bottom: 15px; color: #a3bffa; }
+        body.dark-mode .testimonial p { color: #333333; }
+        .testimonial h4 { color: #00f5d4; font-weight: 600; }
+        body.dark-mode .testimonial h4 { color: #000000; }
+        .slider-nav { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        .slider-nav button {
+            width: 12px; height: 12px; border-radius: 50%; background: #3c6e71;
+            border: none; cursor: pointer; transition: background 0.3s;
+        }
+        body.dark-mode .slider-nav button { background: #cccccc; }
+        .slider-nav button.active { background: #00f5d4; }
+
+        /* Agent Section */
+        .agent { padding: 80px 0; background: linear-gradient(to right, #0a1128, #1c2526); }
+        body.dark-mode .agent { background: #ffffff; }
+        .agent-content { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 40px; }
+        .agent-image { flex: 1 1 300px; text-align: center; }
+        .agent-image h2 {
+            font-size: 26px; background: linear-gradient(45deg, #00f5d4, #f72585);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        body.dark-mode .agent-image h2 { color: #000000; background: none; }
+        .agent-image img { width: 100%; max-width: 300px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); transition: transform 0.3s; }
+        body.dark-mode .agent-image img { box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .agent-image img:hover { transform: scale(1.05); }
+        .agent-info { flex: 1 1 400px; background: #1c2526; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        body.dark-mode .agent-info { background: #f0f0f0; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .agent-info p { color: #a3bffa; }
+        body.dark-mode .agent-info p { color: #333333; }
+
+        /* Contact Section */
+        .contact { padding: 80px 0; background: #0a1128; }
+        body.dark-mode .contact { background: #ffffff; }
+        .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; }
+        .contact-info { background: #0a3d62; color: #fff; padding: 40px; border-radius: 10px; }
+        body.dark-mode .contact-info { background: #f0f0f0; color: #000000; }
+        .contact-info h3 {
+            font-size: 1.8rem; margin-bottom: 20px; background: linear-gradient(45deg, #00f5d4, #f72585);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        body.dark-mode .contact-info h3 { color: #000000; background: none; }
+        .contact-detail { display: flex; align-items: center; margin-bottom: 20px; }
+        .contact-detail i { font-size: 24px; margin-right: 15px; color: #00f5d4; }
+        body.dark-mode .contact-detail i { color: #00f5d4; }
+        .social-links { display: flex; gap: 15px; margin-top: 30px; }
+        .social-links a {
+            background: #3c6e71; color: #fff; width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; transition: all 0.3s;
+        }
+        body.dark-mode .social-links a { background: #cccccc; color: #000000; }
+        .social-links a:hover { background: #00f5d4; color: #0a3d62; transform: translateY(-3px); }
+        .contact-form { background: #1c2526; padding: 40px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        body.dark-mode .contact-form { background: #f0f0f0; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .contact-form h3 {
+            font-size: 1.8rem; text-align: center; background: linear-gradient(45deg, #00f5d4, #f72585);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        body.dark-mode .contact-form h3 { color: #000000; background: none; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #e5e5e5; }
+        body.dark-mode .form-group label { color: #000000; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 12px 15px; border: 1px solid #3c6e71; border-radius: 5px;
+            background: rgba(255,255,255,0.1); color: #fff; font-size: 16px; transition: border-color 0.3s;
+        }
+        body.dark-mode .form-group input, body.dark-mode .form-group textarea, body.dark-mode .form-group select {
+            border: 1px solid #000000; background: #e0e0e0; color: #000000;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: #00f5d4; outline: none; }
+        .form-group textarea { min-height: 120px; resize: vertical; }
+        .submit-btn { background: #00f5d4; color: #0a3d62; border: none; padding: 12px 25px; border-radius: 5px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; width: 100%; }
+        body.dark-mode .submit-btn { background: #00f5d4; color: #0a3d62; }
+        .submit-btn:hover { background: #f72585; color: #fff; }
+
+        /* Footer */
+        footer { background: #0a3d62; color: rgba(255,255,255,0.7); padding: 40px 0 20px; text-align: center; }
+        body.dark-mode footer { background: #ffffff; color: #000000; }
+        .footer-content { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 40px; margin-bottom: 30px; }
+        .footer-section { flex: 1; min-width: 250px; }
+        .footer-section h3 { font-size: 1.5rem; margin-bottom: 20px; color: #00f5d4; }
+        body.dark-mode .footer-section h3 { color: #000000; }
+        .footer-section .whatsapp-link { margin-top: 10px; display: inline-flex; }
+        .footer-bottom { padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+        body.dark-mode .footer-bottom { border-top: 1px solid rgba(0,0,0,0.1); }
+
+        body.dark-mode .cookie-consent { background: #f0f0f0; color: #000000; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .cookie-consent p { margin-bottom: 15px; font-size: 14px; }
+        .cookie-consent button {
+            background: #00f5d4; color: #0a3d62; border: none; padding: 8px 16px;
+            border-radius: 5px; cursor: pointer; transition: all 0.3s;
+        }
+        body.dark-mode .cookie-consent button { background: #00f5d4; color: #0a3d62; }
+        .cookie-consent button:hover { background: #f72585; color: #fff; }
+
+        /* Back to Top Button */
+        .back-to-top {
+            position: fixed; bottom: 20px; right: 20px; background: #00f5d4; color: #0a3d62;
+            width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: all 0.3s;
+        }
+        body.dark-mode .back-to-top { background: #00f5d4; color: #0a3d62; }
+        .back-to-top.show { opacity: 1; visibility: visible; }
+        .back-to-top:hover { background: #f72585; color: #fff; }
+
+        /* Animations */
+        @keyframes typing { from { width: 0; } to { width: 100%; } }
+        @keyframes blink { 0%, 100% { border-color: transparent; } 50% { border-color: #00f5d4; } }
+        @keyframes colorShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        /* Responsive */
+        @media(max-width: 768px) {
+            .header-content { flex-direction: column; text-align: center; }
+            nav ul { display: none; flex-direction: column; width: 100%; background: #0a3d62; padding: 20px 0; }
+            body.dark-mode nav ul { background: #ffffff; }
+            nav ul.show { display: flex; }
+            nav ul li { margin: 10px 0; }
+            .hamburger { display: block; }
+            .hero h1 { font-size: 2.2rem; }
+            .hero p { font-size: 1rem; }
+            .contact-grid { grid-template-columns: 1fr; }
+            .agent-content { flex-direction: column; gap: 20px; }
+            .agent-info { padding: 20px; }
+            .agent-image h2 { font-size: 22px; }
+            .site-title { font-size: 24px; }
+            .site-title span { font-size: 28px; }
+            .language-select, .dark-mode-toggle, .whatsapp-link { margin: 10px auto; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Animation -->
+    <div id="loading">
+        <div class="loader"></div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <img src="logo.png" alt="Land of Multiservice Technologier Logo" loading="lazy">
+                    <h1 class="site-title">LAND OF <span>MULTSERVICE</span> TECHNOLOGIER</h1>
+                </div>
+                <nav>
+                    <button class="hamburger" aria-label="Toggle Menu"><i class="fas fa-bars"></i></button>
+                    <ul>
+                        <li><a href="#home" data-lang="home">Home</a></li>
+                        <li><a href="#services" data-lang="services">Services</a></li>
+                        <li><a href="#testimonials" data-lang="testimonials">Testimonials</a></li>
+                        <li><a href="#agent" data-lang="agent">Agent</a></li>
+                        <li><a href="#contact" data-lang="contact">Contact</a></li>
+                    </ul>
+                </nav>
+                <div class="language-select">
+                    <label for="language">🌐 Language:</label>
+                    <select id="language" aria-label="Select Language">
+                        <option value="en">English</option>
+                        <option value="rw">Kinyarwanda</option>
+                        <option value="sw">Kiswahili</option>
+                        <option value="fr">Français</option>
+                    </select>
+                </div>
+                <button class="dark-mode-toggle" aria-label="Toggle Dark Mode"><i class="fas fa-moon"></i></button>
+                <a href="https://wa.me/+250794948049?text=Hello!%20I%20need%20help%20with%20my%20website!" class="whatsapp-link" aria-label="Contact via WhatsApp">
+                    <img src="https://cdn2.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2-free/128/social-whatsapp-circle-512.png" alt="WhatsApp" class="whatsapp-icon">
+                    WhatsApp
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Search Bar and Filter -->
+    <section class="search-container">
+        <input type="text" id="searchBar" placeholder="Search services..." aria-label="Search services">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="government">Government</button>
+        <button class="filter-btn" data-filter="technology">Technology</button>
+        <button class="filter-btn" data-filter="creative">Creative</button>
+    </section>
+
+    <!-- Hero -->
+    <section class="hero" id="home">
+        <div class="hero-video">
+            <video id="videoPlayer" autoplay muted loop playsinline aria-hidden="true"></video>
+        </div>
+        <div class="hero-content">
+            <div class="subtitle-container">
+                <span class="subtitle active"></span>
+                <span class="subtitle"></span>
+                <span class="subtitle"></span>
+                <span class="subtitle"></span>
+                <span class="subtitle"></span>
+            </div>
+            <h1 data-lang="heroTitle">Welcome to Land of Multiservice Technologier</h1>
+            <p data-lang="heroDesc">Your one-stop solution for technology and regulatory services in Muhanga-Gitarama</p>
+            <a href="#contact" class="btn" data-lang="heroBtn">Contact Us Today</a>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services" id="services">
+        <div class="container">
+            <div class="section-title">
+                <h2 data-lang="ourServices">Our Services</h2>
+                <p data-lang="serviceDesc">We provide a wide range of technology and regulatory services to meet all your needs.</p>
+            </div>
+            <div class="services-grid">
+                <a href="https://irembo.gov.rw/" target="_blank" rel="noopener noreferrer" class="service-card government" role="link">
+                    <i class="fas fa-id-card"></i>
+                    <h3>Irembo Services</h3>
+                    <p>Online government services including national ID, birth certificates, driving license, and other e-Gov solutions.</p>
+                </a>
+                <a href="https://www.rura.rw/" target="_blank" rel="noopener noreferrer" class="service-card government" role="link">
+                    <i class="fas fa-satellite-dish"></i>
+                    <h3>RURA Services</h3>
+                    <p>Regulatory and licensing services for telecommunications and utilities.</p>
+                </a>
+                <a href="javascript:void(0)" class="service-card government" role="link">
+                    <i class="fas fa-landmark"></i>
+                    <h3>Land Services</h3>
+                    <p>Land registration, documentation, and consultation services.</p>
+                </a>
+                <a href="https://www.isuzume.rw/" target="_blank" rel="noopener noreferrer" class="service-card technology" role="link">
+                    <i class="fas fa-mobile-alt"></i>
+                    <h3>Provisional Driving License Exam</h3>
+                    <p>Practice computer-based provisional exams with real questions to improve your score.</p>
+                </a>
+                <a href="https://www.rra.gov.rw/ahabanza" target="_blank" rel="noopener noreferrer" class="service-card government" role="link">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>RRA Services</h3>
+                    <p>Tax registration, filing, and compliance services.</p>
+                </a>
+                <a href="https://www.rdb.rw/" target="_blank" rel="noopener noreferrer" class="service-card government" role="link">
+                    <i class="fas fa-building"></i>
+                    <h3>RDB Services</h3>
+                    <p>Business registration and development board services.</p>
+                </a>
+                <a href="javascript:void(0)" class="service-card technology" role="link">
+                    <i class="fas fa-desktop"></i>
+                    <h3>Cybercafe</h3>
+                    <p>High-speed internet access, printing, and computer rental services.</p>
+                </a>
+                <a href="javascript:void(0)" class="service-card creative" role="link">
+                    <i class="fas fa-print"></i>
+                    <h3>Printing & Advertising</h3>
+                    <p>Design and printing of signboards, posters, banners, invitations, and other advertisement materials.</p>
+                </a>
+                <a href="javascript:void(0)" class="service-card technology" role="link">
+                    <i class="fas fa-code"></i>
+                    <h3>Web Development</h3>
+                    <p>Professional website design and development for businesses.</p>
+                </a>
+                <a href="javascript:void(0)" class="service-card technology" role="link">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    <h3>Computer Training</h3>
+                    <p>Training in MS Office, Photoshop, Internet basics, typing, and other computer skills.</p>
+                </a>
+                <a href="javascript:void(0)" class="service-card creative" role="link">
+                    <i class="fas fa-camera-retro"></i>
+                    <h3>Photography & Event Services</h3>
+                    <p>Photography for weddings, birthdays, events, music, decorations, photo printing, and framing.</p>
+                </a>
+                <a href="https://www.mmi.gov.rw/" target="_blank" rel="noopener noreferrer" class="service-card government" role="link">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <h3>MMI Services</h3>
+                    <p>Insurance and financial solutions by MMI Rwanda.</p>
+                </a>
+                <a href="https://www.rssb.rw/fileadmin/user_upload/CBHI/imbonerahamwe_ya_serivise_zitangwa_muri_mituweli.pdf" target="_blank" rel="noopener noreferrer" class="service-card government" role="link">
+                    <i class="fas fa-heart"></i>
+                    <h3>Mutuel Services</h3>
+                    <p>Health insurance and medical coverage services.</p>
+                </a>
+                <a href="https://www.instagram.com/paiddame" target="_blank" rel="noopener noreferrer" class="service-card government" role="link">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Assurance Services</h3>
+                    <p>Comprehensive insurance services for individuals and businesses.</p>
+                </a>
+                <a href="javascript:void(0)" class="service-card technology" role="link">
+                    <i class="fas fa-wrench"></i>
+                    <h3>Business Advertisement</h3>
+                    <p>Business creation, blueprint, and support services.</p>
+                </a>
+                <a href="javascript:void(0)" class="service-card technology" role="link">
+                    <i class="fas fa-wrench"></i>
+                    <h3>Other Technologies</h3>
+                    <p>Comprehensive technology solutions and support.</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonial Section -->
+    <section class="testimonials" id="testimonials">
+        <div class="container">
+            <div class="section-title">
+                <h2 data-lang="testimonials">What Our Clients Say</h2>
+                <p data-lang="testimonialDesc">Hear from our satisfied customers about their experiences</p>
+            </div>
+            <div class="testimonial-slider">
+                <div class="testimonial active">
+                    <p>"Itsinda rya Land of Multiservice Technologier ryatumye gahunda yanjye yo gusaba Irembo idahwitse kandi byihuse!"</p>
+                    <h4>I.Herve</h4>
+                </div>
+                <div class="testimonial">
+                    <p>"Their web development services transformed my business's online presence. Highly recommended!"</p>
+                    <h4>M.U.Lionel</h4>
+                </div>
+                <div class="testimonial">
+                    <p>« Les photos professionnelles de mon mariage étaient exceptionnelles. Ils ont immortalisé chaque instant à la perfection. »</p>
+                    <h4>M.Elisee</h4>
+                </div>
+                <div class="slider-nav">
+                    <button class="active"></button>
+                    <button></button>
+                    <button></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Agent Section -->
+    <section class="agent" id="agent">
+        <div class="container">
+            <div class="section-title">
+                <h2 data-lang="ourAgent">Our Agent</h2>
+                <p data-lang="agentDesc">Meet our professional team members</p>
+            </div>
+            <div class="agent-content">
+                <div class="agent-image">
+                    <h2>Professional Agent Schwazinegas</h2>
+                    <img src="agent.jfif" alt="Agent Photo" loading="lazy">
+                </div>
+                <div class="agent-info">
+                    <p data-lang="agentInfo">We have experienced professionals ready to assist you with all your technology needs. Our team is trained in various government and regulatory services to provide you with the best support.</p>
+                    <p>Whether you need help with Irembo services, RURA applications, or any other technology service, our agents are here to guide you through the process.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact" id="contact">
+        <div class="container">
+            <div class="section-title">
+                <h2 data-lang="contactUs">Contact Us</h2>
+                <p data-lang="contactDesc">Get in touch with us for any service inquiries or support</p>
+            </div>
+            <div class="contact-grid">
+                <div class="contact-info">
+                    <h3 data-lang="contactDetails">Contact Details</h3>
+                    <div class="contact-detail">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <p>Tel/WhatsApp: <a href="https://wa.me/+250794948049" style="color:#00f5d4;">0794948049</a></p>
+                        </div>
+                    </div>
+                    <div class="contact-detail">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <p>Email: <a href="mailto:multservices001@gmail.com" style="color:#00f5d4;">multservices001@gmail.com</a></p>
+                        </div>
+                    </div>
+                    <div class="contact-detail">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div>
+                            <p>Location: Muhanga-Gitarama</p>
+                            <p>Click for <a href="https://maps.google.com/?q=Muhanga-Gitarama" style="color:#00f5d4;">Google Maps</a></p>
+                        </div>
+                    </div>
+                    <div class="social-links">
+                        <a href="https://www.facebook.com/@arnouldschwazinegas" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="https://www.instagram.com/paiddame" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="https://www.x.com/@LandOf_MTS_2025" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="https://www.linkedin.com/in/land-of-multiservices-technologier-7bb920384" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="https://youtube.com/@Schwazinegas" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                <div class="contact-form">
+                    <h3>Send Us a Message</h3>
+                    <form id="clientForm" novalidate>
+                        <div class="form-group">
+                            <label for="name">Your Name</label>
+                            <input type="text" id="name" name="name" required aria-required="true">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" required aria-required="true" pattern="[0-9]{10,}">
+                        </div>
+                        <div class="form-group">
+                            <label for="service">Service Needed</label>
+                            <select id="service" name="service" required aria-required="true">
+                                <option value="">Select a service</option>
+                                <option value="Irembo Services">Irembo Services</option>
+                                <option value="RURA Services">RURA Services</option>
+                                <option value="Land Services">Land Services</option>
+                                <option value="RRA Services">RRA Services</option>
+                                <option value="RDB Services">RDB Services</option>
+                                <option value="Cybercafe">Cybercafe</option>
+                                <option value="Web Development">Web Development</option>
+                                <option value="Inkiko Services">Inkiko Services</option>
+                                <option value="Computer Training">Computer Training</option>
+                                <option value="Printing & Advertising">Printing & Advertising</option>
+                                <option value="Photography & Event Services">Photography & Event Services</option>
+                                <option value="Other Technologies">Business Advertisement</option>
+                                <option value="Other Technologies">Other Technologies</option>
+                                <option value="Other Technologies">Free Help Fast</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Your Message</label>
+                            <textarea id="message" name="message" required aria-required="true"></textarea>
+                        </div>
+                        <button type="submit" class="submit-btn">Send via WhatsApp</button>
+                    </form>
+                </div>
+                <div class="contact-info" style="background:#00f5d4; color: #0a3d62;">
+                    <h3 data-lang="businessHours">Business Hours</h3>
+                    <div class="contact-detail">
+                        <i class="fas fa-clock" style="color: #0a3d62;"></i>
+                        <div>
+                            <p>Monday - Friday: 8:00 AM - 6:00 PM</p>
+                            <p>Saturday: 9:00 AM - 4:00 PM</p>
+                            <p>Sunday: Closed</p>
+                        </div>
+                    </div>
+                    <div class="contact-detail">
+                        <i class="fas fa-info-circle" style="color: #0a3d62;"></i>
+                        <div>
+                            <p>Walk-ins welcome but appointments recommended for specific services</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>LAND OF MULTSERVICE TECHNOLOGIER</h3>
+                    <p>Your comprehensive technology solutions provider in Muhanga-Gitarama</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <p><a href="#home" style="color:#00f5d4;">Home</a></p>
+                    <p><a href="#services" style="color:#00f5d4;">Services</a></p>
+                    <p><a href="#testimonials" style="color:#00f5d4;">Testimonials</a></p>
+                    <p><a href="#agent" style="color:#00f5d4;">Agent</a></p>
+                    <p><a href="#contact" style="color:#00f5d4;">Contact</a></p>
+                </div>
+                <div class="footer-section">
+                    <h3>Contact</h3>
+                    <p>Tel/WhatsApp: 0794948049</p>
+                    <p>Email: multservices001@gmail.com</p>
+                    <a href="https://wa.me/+250794948049?text=Hello!%20I%20need%20help%20with%20my%20website!" class="whatsapp-link" aria-label="Contact via WhatsApp">
+                        <img src="https://cdn2.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2-free/128/social-whatsapp-circle-512.png" alt="WhatsApp" class="whatsapp-icon">
+                        Chat on WhatsApp
+                    </a>
+                </div>
+            </div>
+            <div class="footer-bottom">2025 LAND OF MULTSERVICE TECHNOLOGIER</div>
+            <div class="footer-bottom">Designed BY Schwazinegas</div>
+        </div>
+    </footer>
+
+    <!-- Back to Top Button -->
+    <a href="#home" class="back-to-top" aria-label="Back to Top"><i class="fas fa-chevron-up"></i></a>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // Loading Animation
+        window.addEventListener("load", () => {
+            const loading = document.getElementById("loading");
+            loading.style.opacity = "0";
+            setTimeout(() => {
+                loading.style.display = "none";
+            }, 500);
+        });
+
+        // Video sequence
+        const videos = ["a.mp4", "b.mp4", "c.mp4", "d.mp4", "e.mp4"];
+        const videoPlayer = document.getElementById("videoPlayer");
+        let currentIndex = 0;
+        const videoDuration = 30000;
+        const fadeTime = 1000;
+
+        function playVideo(index) {
+            videoPlayer.style.opacity = 0;
+            setTimeout(() => {
+                videoPlayer.src = videos[index];
+                videoPlayer.play().catch(() => console.log("Video play failed"));
+                videoPlayer.style.opacity = 1;
+            }, fadeTime);
+        }
+
+        if (videos.length > 0) {
+            playVideo(currentIndex);
+        }
+
+        setInterval(() => {
+            currentIndex = (currentIndex + 1) % videos.length;
+            playVideo(currentIndex);
+        }, videoDuration);
+
+        // Subtitles
+        const subtitles = document.querySelectorAll(".subtitle");
+        let subtitleIndex = 0;
+
+        function rotateSubtitles() {
+            subtitles.forEach((sub, i) => {
+                sub.classList.toggle("active", i === subtitleIndex);
+            });
+            subtitleIndex = (subtitleIndex + 1) % subtitles.length;
+        }
+
+        rotateSubtitles();
+        setInterval(rotateSubtitles, 5000);
+
+        // Hamburger Menu
+        const hamburger = document.querySelector(".hamburger");
+        const navUl = document.querySelector("nav ul");
+
+        hamburger.addEventListener("click", () => {
+            navUl.classList.toggle("show");
+        });
+
+        // Dark Mode Toggle
+        const darkModeToggle = document.querySelector(".dark-mode-toggle");
+        darkModeToggle.addEventListener("click", () => {
+            document.body.classList.toggle("dark-mode");
+            localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+            const icon = darkModeToggle.querySelector("i");
+            icon.classList.toggle("fa-moon", !document.body.classList.contains("dark-mode"));
+            icon.classList.toggle("fa-sun", document.body.classList.contains("dark-mode"));
+        });
+
+        if (localStorage.getItem("darkMode") === "true") {
+            document.body.classList.add("dark-mode");
+            const icon = darkModeToggle.querySelector("i");
+            icon.classList.remove("fa-moon");
+            icon.classList.add("fa-sun");
+        }
+
+        // Form Validation and WhatsApp Submission
+        const form = document.getElementById("clientForm");
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+            const name = document.getElementById("name").value.trim();
+            const phone = document.getElementById("phone").value.trim();
+            const service = document.getElementById("service").value;
+            const message = document.getElementById("message").value.trim();
+
+            if (!name || !phone || !service || !message) {
+                alert("Please fill in all required fields.");
+                return;
+            }
+
+            if (!/^[0-9]{10,}$/.test(phone)) {
+                alert("Please enter a valid phone number.");
+                return;
+            }
+
+            const url = `https://wa.me/250794948049?text=Name:%20${encodeURIComponent(name)}%0APhone:%20${encodeURIComponent(phone)}%0AService:%20${encodeURIComponent(service)}%0AMessage:%20${encodeURIComponent(message)}`;
+            window.open(url, "_blank");
+            form.reset();
+        });
+
+        // Animate service cards
+        const serviceCards = document.querySelectorAll(".service-card");
+
+        function animateCards() {
+            const triggerBottom = window.innerHeight * 0.85;
+            serviceCards.forEach(card => {
+                const cardTop = card.getBoundingClientRect().top;
+                if (cardTop < triggerBottom) {
+                    card.classList.add("show");
+                }
+            });
+        }
+
+        window.addEventListener("scroll", animateCards);
+        window.addEventListener("load", animateCards);
+
+        // Back to Top Button
+        const backToTop = document.querySelector(".back-to-top");
+        window.addEventListener("scroll", () => {
+            if (window.scrollY > 300) {
+                backToTop.classList.add("show");
+            } else {
+                backToTop.classList.remove("show");
+            }
+        });
+
+        // Search and Filter Functionality
+        const searchBar = document.getElementById("searchBar");
+        const filterButtons = document.querySelectorAll(".filter-btn");
+
+        searchBar.addEventListener("input", function() {
+            const query = this.value.toLowerCase();
+            filterServices(query, document.querySelector(".filter-btn.active").dataset.filter);
+        });
+
+        filterButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                filterButtons.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                filterServices(searchBar.value.toLowerCase(), btn.dataset.filter);
+            });
+        });
+
+        function filterServices(query, filter) {
+            serviceCards.forEach(card => {
+                const title = card.querySelector("h3").textContent.toLowerCase();
+                const desc = card.querySelector("p").textContent.toLowerCase();
+                const category = card.classList.contains(filter) || filter === "all";
+                const matchesSearch = title.includes(query) || desc.includes(query);
+                card.style.display = (category && matchesSearch) ? "block" : "none";
+            });
+        }
+
+        // Testimonial Slider
+        const testimonials = document.querySelectorAll(".testimonial");
+        const sliderNavButtons = document.querySelectorAll(".slider-nav button");
+        let testimonialIndex = 0;
+
+        function showTestimonial(index) {
+            testimonials.forEach((t, i) => {
+                t.classList.toggle("active", i === index);
+            });
+            sliderNavButtons.forEach((btn, i) => {
+                btn.classList.toggle("active", i === index);
+            });
+        }
+
+        sliderNavButtons.forEach((btn, i) => {
+            btn.addEventListener("click", () => {
+                testimonialIndex = i;
+                showTestimonial(testimonialIndex);
+            });
+        });
+
+        setInterval(() => {
+            testimonialIndex = (testimonialIndex + 1) % testimonials.length;
+            showTestimonial(testimonialIndex);
+        }, 5000);
+
+        // Translations
+        const translations = {
+            en: {
+                home: "Home",
+                services: "Services",
+                testimonials: "Testimonials",
+                agent: "Agent",
+                contact: "Contact",
+                heroTitle: "Welcome to Land of Multiservice Technologier",
+                heroDesc: "Your one-stop solution for technology and regulatory services in Muhanga-Gitarama",
+                heroBtn: "Contact Us Today",
+                ourServices: "Our Services",
+                serviceDesc: "We provide a wide range of technology and regulatory services to meet all your needs",
+                testimonials: "What Our Clients Say",
+                testimonialDesc: "Hear from our satisfied customers about their experiences",
+                ourAgent: "Our Agent",
+                agentDesc: "Meet our professional team members",
+                agentInfo: "We have experienced professionals ready to assist you with all your technology needs. Our team is trained in various government and regulatory services to provide you with the best support.",
+                contactUs: "Contact Us",
+                contactDesc: "Get in touch with us for any service inquiries or support",
+                contactDetails: "Contact Details",
+                businessHours: "Business Hours"
+            },
+            rw: {
+                home: "Ahabanza",
+                services: "Serivisi",
+                testimonials: "Ibyo Abakiriya Bacu Bavuga",
+                agent: "Umukozi",
+                contact: "Twandikire",
+                heroTitle: "Murakaza neza mu Land of Multiservice Technologier",
+                heroDesc: "Ikigo cyacu ni icyo gukemura ibibazo by'ikoranabuhanga n'amategeko muri Muhanga-Gitarama",
+                heroBtn: "Twandikire Ubu",
+                ourServices: "Serivisi Zacu",
+                serviceDesc: "Dutanga serivisi nyinshi zijyanye n'ikoranabuhanga n'amategeko kugira ngo zikwiruze ibyo ukeneye",
+                testimonials: "Ibyo Abakiriya Bacu Bavuga",
+                testimonialDesc: "Umva ibyo abakiriya bacu bishimiye bavuga ku byo bamaze gukorana natwe",
+                ourAgent: "Umukozi Wacu",
+                agentDesc: "Menya abakozi bacu b'abahanga",
+                agentInfo: "Dufite abahanga bahuguwe muri serivisi za IT kugirango bagukorere neza. Ikipe yacu yatojwe muri serivisi za leta n’amategeko kugirango tuguhe ubufasha bwizaWaba ukeneye ubufasha muri serivisi za Irembo, porogaramu za RURA, cyangwa indi serivise iyariyo yose, abakozi bacu bari hano kugirango bakuyobore mubikorwa.",
+                contactUs: "Twandikire",
+                contactDesc: "Tuvugishe ku byerekeye serivisi cyangwa ubufasha",
+                contactDetails: "Amakuru yo Kuduhuza",
+                businessHours: "Amasaha Dukora"
+            },
+            sw: {
+                home: "Nyumbani",
+                services: "Huduma",
+                testimonials: "Maoni ya Wateja Wetu",
+                agent: "Wakala",
+                contact: "Wasiliana",
+                heroTitle: "Karibu kwa Land of Multiservice Technologier",
+                heroDesc: "Suluhisho lako la huduma za teknolojia na za kisheria huko Muhanga-Gitarama",
+                heroBtn: "Wasiliana Nasi Leo",
+                ourServices: "Huduma Zetu",
+                serviceDesc: "Tunatoa huduma mbalimbali za kiteknolojia na za kisheria kukidhi mahitaji yako",
+                testimonials: "Maoni ya Wateja Wetu",
+                testimonialDesc: "Sikia kutoka kwa wateja wetu waliokidhiwa kuhusu uzoefu wao",
+                ourAgent: "Wakala Wetu",
+                agentDesc: "Kutana na wafanyakazi wetu wa kitaalamu",
+                agentInfo: "Tuna wataalamu wenye uzoefu tayari kukusaidia na mahitaji yako yote ya teknolojia. Timu yetu imefunzwa katika huduma mbalimbali za serikali na za kisheria ili kukupa msaada bora zaidi.",
+                contactUs: "Wasiliana Nasi",
+                contactDesc: "Wasiliana nasi kwa maswali au msaada wowote",
+                contactDetails: "Maelezo ya Mawasiliano",
+                businessHours: "Muda wa Kufanya Kazi"
+            },
+            fr: {
+                home: "Accueil",
+                services: "Services",
+                testimonials: "Témoignages",
+                agent: "Agent",
+                contact: "Contact",
+                heroTitle: "Bienvenue au Land of Multiservice Technologier",
+                heroDesc: "Votre solution unique pour les services technologiques et réglementaires à Muhanga-Gitarama",
+                heroBtn: "Contactez-nous aujourd'hui",
+                ourServices: "Nos Services",
+                serviceDesc: "Nous fournissons une large gamme de services technologiques et réglementaires pour répondre à vos besoins",
+                testimonials: "Ce que disent nos clients",
+                testimonialDesc: "Écoutez les expériences de nos clients satisfaits",
+                ourAgent: "Notre Agent",
+                agentDesc: "Rencontrez les membres de notre équipe professionnelle",
+                agentInfo: "Nous avons des professionnels expérimentés prêts à vous aider avec tous vos besoins technologiques. Notre équipe est formée dans divers services gouvernementaux et réglementaires pour vous fournir le meilleur soutien.",
+                contactUs: "Contactez-nous",
+                contactDesc: "Contactez-nous pour toute demande ou assistance",
+                contactDetails: "Coordonnées",
+                businessHours: "Heures d'ouverture"
+            }
+        };
+
+        // Automatic Language Detection and Translation
+        function applyTranslations(lang) {
+            document.querySelectorAll("[data-lang]").forEach(el => {
+                const key = el.getAttribute("data-lang");
+                if (translations[lang] && translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+            document.documentElement.lang = lang;
+        }
+
+        const browserLang = navigator.language.split('-')[0];
+        const supportedLangs = ['en', 'rw', 'sw', 'fr'];
+        const defaultLang = supportedLangs.includes(browserLang) ? browserLang : 'en';
+
+        applyTranslations(defaultLang);
+        document.getElementById("language").value = defaultLang;
+
+        document.getElementById("language").addEventListener("change", function() {
+            applyTranslations(this.value);
+        });
+    </script>
+</body>
+</html>
